@@ -95,6 +95,20 @@ def move_spot_forward(robot, distance_m, distance_unit, event):
     except Exception as e:
         print("Failed to move spot SPOT.\nReason:" + str(e))
 
+
+# TEST
+# make spot stand
+def make_spot_stand(robot, event):
+    try:
+        # command the robot to stand
+        command_client = robot.ensure_client(RobotCommandClient.default_service_name)
+        blocking_stand(command_client, timeout_sec=10)
+        # After SPOT stands up, end command
+        stop_cmd = RobotCommandBuilder.stop_command()
+        command_client.robot_command(lease=None, command=stop_cmd)
+    except Exception as e:
+        print("Failed to make spot stand SPOT.\nReason:" + str(e))
+
 # TEST
 # def move_spot_backward(robot, distance_m, distance_unit, event):
 #     UNITS = {"seconds", "minutes"}
