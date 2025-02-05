@@ -1,10 +1,9 @@
 from gpt_module import generate_function
 from threading import Thread, Event
 from bosdyn.client import create_standard_sdk
-from bosdyn.api import robot_state_pb2
 
 # Add import for new functions here
-from SPOT_functions import authenticate_SPOT, stop_spot, power_off_spot, power_on_spot, move_spot_forward, make_spot_stand
+from SPOT_functions import authenticate_SPOT, stop_spot, power_off_spot, power_on_spot, move_spot_forward
 import json
 
 # import for text to speech, speech to text
@@ -18,7 +17,6 @@ COMMAND_LIST = {
     "power_off", 
     "move_spot_forward",
     # ADD move_spot_backward
-    "stand",
     "stop",
     "quit"
     }
@@ -79,8 +77,6 @@ def check_stop_or_quit(input_string, threads, event):
 
 def task(event, function_name, function_arguments):
     print("Attempting to run the function " + function_name)
-    # get the current state of the robot
-    robot_state = ROBOT.get_state();
     if(function_name == "move_spot_forward"):
         args = json.loads(function_arguments)
         distance_m = args["time"]
@@ -89,13 +85,8 @@ def task(event, function_name, function_arguments):
     # ADD CASE FOR MOVING SPOT BACKWARD
     # elif(function_name == "move_spot_backward"):
 
-    # spot stand (if not already)
-    elif(robot_state.body_state != robot_state_pb2.RobotState.BodyState.STANDING and function_name == "stand"):
-        make_spot_stand(ROBOT)
-
     elif(function_name == "power_on"):
         power_on_spot(ROBOT)
-
     elif(function_name == "power_off"):
         power_off_spot(ROBOT)
 
