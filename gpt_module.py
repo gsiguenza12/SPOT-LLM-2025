@@ -51,14 +51,6 @@ tools = [
             "description": "Command a SPOT robot to power on",
         }
     },
-    # STAND FUNCTION NEEDS TESTING
-    {
-        "type": "function",
-        "function": {
-            "name": "stand",
-            "description": "Command a SPOT robot to stand up",
-        }
-    },
     {
         "type": "function",
         "function": {
