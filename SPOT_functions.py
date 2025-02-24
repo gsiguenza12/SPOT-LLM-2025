@@ -7,7 +7,7 @@ def authenticate_SPOT(robot):
     """
     function to authenticate to a SPOT ROBOT.
     If authentication is successfull: 
-        the function will attempt to turn off estop and take control of the lease
+    - will attempt to turn off estop and take control of the lease
     An exception will be raised and the reason will be given to the console.
     @return: True if success, False otherwise
     """
