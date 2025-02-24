@@ -3,7 +3,7 @@ from threading import Thread, Event
 from bosdyn.client import create_standard_sdk
 
 # Add import for new functions here
-from SPOT_functions import authenticate_SPOT, stop_spot, power_off_spot, power_on_spot, move_spot_forward
+from SPOT_functions import authenticate_SPOT, stop_spot, power_off_spot, power_on_spot, move_spot_forward, move_spot_backward, move_spot_left, move_spot_right
 import json
 
 # import for text to speech, speech to text
@@ -16,7 +16,9 @@ COMMAND_LIST = {
     "power_on", 
     "power_off", 
     "move_spot_forward",
-    # ADD move_spot_backward
+    "move_spot_backward",
+    "move_spot_left",
+    "move_spot_right",
     "stop",
     "quit"
     }
@@ -81,10 +83,22 @@ def task(event, function_name, function_arguments):
         args = json.loads(function_arguments)
         distance_m = args["time"]
         distance_unit = args["time_format"]
-        move_spot_forward(robot=ROBOT, distance_m=distance_m, distance_unit=distance_unit, event=event)
-    # ADD CASE FOR MOVING SPOT BACKWARD
-    # elif(function_name == "move_spot_backward"):
-
+        move_spot_forward(robot=ROBOT, distance_m=distance_m, distance_unit=1, event=event)
+    elif(function_name == "move_spot_backward"):
+        args = json.loads(function_arguments)
+        distance_m = args["time"]
+        distance_unit = args["time_format"]
+        move_spot_backward(robot=ROBOT, distance_m=distance_m, distance_unit=distance_unit, event=event)
+    elif(function_name == "move_spot_left"):
+        args = json.loads(function_arguments)
+        distance_m = args["time"]
+        distance_unit = args["time_format"]
+        move_spot_left(robot=ROBOT, distance_m=distance_m, distance_unit=distance_unit, event=event)  
+    elif(function_name == "move_spot_right"):
+        args = json.loads(function_arguments)
+        distance_m = args["time"]
+        distance_unit = args["time_format"]
+        move_spot_right(robot=ROBOT, distance_m=distance_m, distance_unit=distance_unit, event=event)       
     elif(function_name == "power_on"):
         power_on_spot(ROBOT)
     elif(function_name == "power_off"):

@@ -13,7 +13,7 @@ ensuring that each function is clearly described and that any required parameter
 
 client = OpenAI(
     # This is the default and can be omitted
-    api_key="sk-redacted",
+    api_key="redacted",
 )
 # set the output location
 current_directory = os.getcwd()
@@ -43,7 +43,75 @@ tools = [
             },
         }
     },
-    # ADD WALK BACKWARD FUNCTION
+    {
+        "type": "function",
+        "function": {
+            "name": "move_spot_backward",
+            "description": "Command a SPOT robot to move backward",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "time": {
+                        "type": "integer",
+                        "description": "The time it takes for the robot to move backward.",
+                    },
+                    "time_format": {
+                        "type": "string",
+                        "enum": ["seconds", "minutes"],
+                        "description": "The unit of time for this command. Make sure that it is either seconds or minutes. "
+                        "Do not accept any other time format as a valid format. Ensure the time does not exceed 30 seconds",
+                    },
+                },
+                "required": ["time", "time_format"],
+            },
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "move_spot_left",
+            "description": "Command a SPOT robot to move left",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "time": {
+                        "type": "integer",
+                        "description": "The time it takes for the robot to move left.",
+                    },
+                    "time_format": {
+                        "type": "string",
+                        "enum": ["seconds", "minutes"],
+                        "description": "The unit of time for this command. Make sure that it is either seconds or minutes. "
+                        "Do not accept any other time format as a valid format. Ensure the time does not exceed 30 seconds",
+                    },
+                },
+                "required": ["time", "time_format"],
+            },
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "move_spot_right",
+            "description": "Command a SPOT robot to move right",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "time": {
+                        "type": "integer",
+                        "description": "The time it takes for the robot to move right.",
+                    },
+                    "time_format": {
+                        "type": "string",
+                        "enum": ["seconds", "minutes"],
+                        "description": "The unit of time for this command. Make sure that it is either seconds or minutes. "
+                        "Do not accept any other time format as a valid format. Ensure the time does not exceed 30 seconds",
+                    },
+                },
+                "required": ["time", "time_format"],
+            },
+        }
+    },
     {
         "type": "function",
         "function": {
@@ -98,7 +166,7 @@ def generate_function(user_input):
     messages.append({"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."})
     messages.append({"role": "user", "content": user_input})
     completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         messages=messages,
         tools=tools
     )
@@ -110,7 +178,7 @@ def generate_function(user_input):
         messages.append({"role": "user", "content": user_input})
         
         completion = client.chat.completions.create(
-          model="gpt-3.5-turbo",
+          model="gpt-4o-mini",
           messages=messages,
           tools=tools
         )

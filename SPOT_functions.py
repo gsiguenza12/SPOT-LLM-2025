@@ -7,7 +7,7 @@ def authenticate_SPOT(robot):
     """
     function to authenticate to a SPOT ROBOT.
     If authentication is successfull: 
-    - will attempt to turn off estop and take control of the lease
+        the function will attempt to turn off estop and take control of the lease
     An exception will be raised and the reason will be given to the console.
     @return: True if success, False otherwise
     """
@@ -15,7 +15,7 @@ def authenticate_SPOT(robot):
         bosdyn.client.util.authenticate(robot) #authenticate using bosdyn generic function
         robot.time_sync.wait_for_sync()
         
-        estop_client = robot.ensure_client('estop')
+        estop_client = robot.ensure_client('estop') 
         estop_endpoint = bosdyn.client.estop.EstopEndpoint(client=estop_client, name='spotgpt_estop', estop_timeout=25.0)   #power cutoff after 25 seconds
         estop_endpoint.force_simple_setup()
         estop_keep_alive = bosdyn.client.estop.EstopKeepAlive(estop_endpoint)
@@ -96,41 +96,113 @@ def move_spot_forward(robot, distance_m, distance_unit, event):
         print("Failed to move spot SPOT.\nReason:" + str(e))
 
 # TEST
-# def move_spot_backward(robot, distance_m, distance_unit, event):
-#     UNITS = {"seconds", "minutes"}
-#     try:
-#         distance_m = int(distance_m)
-#         if distance_unit not in UNITS:
-#             raise Exception("Invalid distance time unit")
-#         if distance_unit == "minutes":
-#             distance_m = distance_m * 60
-#         if distance_m > 30:
-#             raise Exception("Exceed distance limit")
-#         if not robot.is_powered_on():
-#             raise Exception("SPOT is off")
-#         command_client = robot.ensure_client(RobotCommandClient.default_service_name)
-#         blocking_stand(command_client, timeout_sec=10)
-# 
-#         # Build a velocity command in the robot's frame. Positive x is forward. change to move in opposite direction
-#         vel_cmd = RobotCommandBuilder.synchro_velocity_command(v_x=0.5, v_y=0,
-#                                                                v_rot=0)
-# 
-#         # Calculate the time needed to travel the desired distance at the given speed.
-#         travel_time_s = distance_m / 0.5
-# 
-#         # Issue the command to start moving
-#         command_client.robot_command(lease=None, command=vel_cmd,
-#                                      end_time_secs=time.time() + travel_time_s)
-# 
-#         # Wait for Spot to finish moving
-#         event.wait(travel_time_s)
-# 
-#         # After moving the desired distance, stop Spot by sending a zero velocity command
-#         stop_cmd = RobotCommandBuilder.stop_command()
-#         command_client.robot_command(lease=None, command=stop_cmd)
-#         blocking_sit(command_client, timeout_sec=10)
-#     except Exception as e:
-#         print("Failed to move spot SPOT.\nReason:" + str(e))
+def move_spot_backward(robot, distance_m, distance_unit, event):
+     UNITS = {"seconds", "minutes"}
+     try:
+         distance_m = int(distance_m)
+         if distance_unit not in UNITS:
+            raise Exception("Invalid distance time unit")
+         if distance_unit == "minutes":
+             distance_m = distance_m * 60
+         if distance_m > 30:
+             raise Exception("Exceed distance limit")
+         if not robot.is_powered_on():
+             raise Exception("SPOT is off")
+         command_client = robot.ensure_client(RobotCommandClient.default_service_name)
+         blocking_stand(command_client, timeout_sec=10)
+ 
+         # Build a velocity command in the robot's frame. Positive x is forward. change to move in opposite direction
+         vel_cmd = RobotCommandBuilder.synchro_velocity_command(v_x=-0.5, v_y=0,
+                                                                v_rot=0)
+ 
+         # Calculate the time needed to travel the desired distance at the given speed.
+         travel_time_s = distance_m / 0.5
+ 
+         # Issue the command to start moving
+         command_client.robot_command(lease=None, command=vel_cmd,
+                                      end_time_secs=time.time() + travel_time_s)
+ 
+         # Wait for Spot to finish moving
+         event.wait(travel_time_s)
+ 
+         # After moving the desired distance, stop Spot by sending a zero velocity command
+         stop_cmd = RobotCommandBuilder.stop_command()
+         command_client.robot_command(lease=None, command=stop_cmd)
+         blocking_sit(command_client, timeout_sec=10)
+     except Exception as e:
+         print("Failed to move spot SPOT.\nReason:" + str(e))
+
+def move_spot_left(robot, distance_m, distance_unit, event):
+     UNITS = {"seconds", "minutes"}
+     try:
+         distance_m = int(distance_m)
+         if distance_unit not in UNITS:
+            raise Exception("Invalid distance time unit")
+         if distance_unit == "minutes":
+             distance_m = distance_m * 60
+         if distance_m > 30:
+             raise Exception("Exceed distance limit")
+         if not robot.is_powered_on():
+             raise Exception("SPOT is off")
+         command_client = robot.ensure_client(RobotCommandClient.default_service_name)
+         blocking_stand(command_client, timeout_sec=10)
+ 
+         # Build a velocity command in the robot's frame. Positive x is forward. change to move in opposite direction
+         vel_cmd = RobotCommandBuilder.synchro_velocity_command(v_x=0, v_y=0.5,
+                                                                v_rot=0)
+ 
+         # Calculate the time needed to travel the desired distance at the given speed.
+         travel_time_s = distance_m / 0.5
+ 
+         # Issue the command to start moving
+         command_client.robot_command(lease=None, command=vel_cmd,
+                                      end_time_secs=time.time() + travel_time_s)
+ 
+         # Wait for Spot to finish moving
+         event.wait(travel_time_s)
+ 
+         # After moving the desired distance, stop Spot by sending a zero velocity command
+         stop_cmd = RobotCommandBuilder.stop_command()
+         command_client.robot_command(lease=None, command=stop_cmd)
+         blocking_sit(command_client, timeout_sec=10)
+     except Exception as e:
+         print("Failed to move spot SPOT.\nReason:" + str(e))
+
+def move_spot_right(robot, distance_m, distance_unit, event):
+     UNITS = {"seconds", "minutes"}
+     try:
+         distance_m = int(distance_m)
+         if distance_unit not in UNITS:
+            raise Exception("Invalid distance time unit")
+         if distance_unit == "minutes":
+             distance_m = distance_m * 60
+         if distance_m > 30:
+             raise Exception("Exceed distance limit")
+         if not robot.is_powered_on():
+             raise Exception("SPOT is off")
+         command_client = robot.ensure_client(RobotCommandClient.default_service_name)
+         blocking_stand(command_client, timeout_sec=10)
+ 
+         # Build a velocity command in the robot's frame. Positive x is forward. change to move in opposite direction
+         vel_cmd = RobotCommandBuilder.synchro_velocity_command(v_x=0, v_y=-0.5,
+                                                                v_rot=0)
+ 
+         # Calculate the time needed to travel the desired distance at the given speed.
+         travel_time_s = distance_m / 0.5
+ 
+         # Issue the command to start moving
+         command_client.robot_command(lease=None, command=vel_cmd,
+                                      end_time_secs=time.time() + travel_time_s)
+ 
+         # Wait for Spot to finish moving
+         event.wait(travel_time_s)
+ 
+         # After moving the desired distance, stop Spot by sending a zero velocity command
+         stop_cmd = RobotCommandBuilder.stop_command()
+         command_client.robot_command(lease=None, command=stop_cmd)
+         blocking_sit(command_client, timeout_sec=10)
+     except Exception as e:
+         print("Failed to move spot SPOT.\nReason:" + str(e))
 
 def stop_spot(robot):
     try:
@@ -139,4 +211,3 @@ def stop_spot(robot):
         stop_cmd = RobotCommandBuilder.stop_command()
         command_client.robot_command(lease=None, command=stop_cmd)
     except Exception as e:
-        print("Failed to stop spot. Reason: " + str(e))
