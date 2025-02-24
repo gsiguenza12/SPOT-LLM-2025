@@ -101,7 +101,7 @@ def main():
     robot_controller.speak("Hello, welcome to the Spot-LLM Program!")
     
     while True:
-        user_input = input("What do you want to do? ").lower()
+        user_input = input("What do you want to do? ")
         if robot_controller.check_stop_or_quit(user_input):
             break
         robot_controller.process_gpt_command(user_input)
