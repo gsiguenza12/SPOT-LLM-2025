@@ -211,3 +211,4 @@ def stop_spot(robot):
         stop_cmd = RobotCommandBuilder.stop_command()
         command_client.robot_command(lease=None, command=stop_cmd)
     except Exception as e:
+        print("Failed to stop spot. Reason: " + str(e))
