@@ -2,6 +2,8 @@
 
 Use OpenAI to continuously interact with and command SPOT
 
+[JIRA Board](https://spot-llm.atlassian.net/jira/software/projects/SLLM/boards/2)
+
 ## Relevant References
 
 - [Boston Dynamics Hawkeye](https://github.com/gsiguenza12/LLM-spot-boston-dynamics/blob/master/main.py)
