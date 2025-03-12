@@ -3,7 +3,7 @@ from threading import Thread, Event
 from bosdyn.client import create_standard_sdk
 
 # Add import for new functions here
-from SPOT_functions import authenticate_SPOT, stop_spot, power_off_spot, power_on_spot, move_spot_forward, move_spot_backward, move_spot_left, move_spot_right
+from SPOT_functions import authenticate_SPOT, stop_spot, power_off_spot, power_on_spot, move_spot_forward, move_spot_backward, move_spot_left, move_spot_right, raise_arm
 import json
 
 # import for text to speech, speech to text
@@ -20,7 +20,8 @@ COMMAND_LIST = {
     "move_spot_left",
     "move_spot_right",
     "stop",
-    "quit"
+    "quit",
+    "raise_arm"
     }
 
 SDK = create_standard_sdk('SpotClient')   #create spot sdk
@@ -103,6 +104,8 @@ def task(event, function_name, function_arguments):
         power_on_spot(ROBOT)
     elif(function_name == "power_off"):
         power_off_spot(ROBOT)
+    elif(function_name == "raise_arm"):
+        raise_arm(robot=ROBOT)
 
 '''
 -> Perception -> Control -> Action -> Environment -> LOOP until goal or condition is met (in our case when we tell spot to stop listening)

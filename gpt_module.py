@@ -115,6 +115,13 @@ tools = [
     {
         "type": "function",
         "function": {
+            "name": "raise_arm",
+            "description": "Command SPOT to raise its arm",
+        }
+    }
+    {
+        "type": "function",
+        "function": {
             "name": "power_on",
             "description": "Command a SPOT robot to power on",
         }

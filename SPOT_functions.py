@@ -212,3 +212,46 @@ def stop_spot(robot):
         command_client.robot_command(lease=None, command=stop_cmd)
     except Exception as e:
              print("Failed to stop spot. Reason: " + str(e))
+
+def raise_arm(robot):
+    try: 
+        print("Raising arm up and down")
+        command_client = robot.ensure_client(RobotCommandClient.default_service_name)
+        unstow_command_id = command_client.robot_command(unstow)
+
+        block_until_arm_arrives(command_client, unstow_command_id, 3.0)
+
+        # Make the arm pose RobotCommand
+        # Build a position to move the arm to (in meters, relative to and expressed in the gravity aligned body frame).
+        x = 0.75
+        y = 0
+        z = 0.25
+        hand_ewrt_flat_body = geometry_pb2.Vec3(x=x, y=y, z=z)
+
+        # Rotation as a quaternion
+        qw = 1
+        qx = 0
+        qy = 0
+        qz = 0
+        flat_body_Q_hand = geometry_pb2.Quaternion(w=qw, x=qx, y=qy, z=qz)
+
+        flat_body_T_hand = geometry_pb2.SE3Pose(position=hand_ewrt_flat_body,
+                                                rotation=flat_body_Q_hand)
+
+        robot_state = robot_state_client.get_robot_state()
+        odom_T_flat_body = get_a_tform_b(robot_state.kinematic_state.transforms_snapshot,
+                                         ODOM_FRAME_NAME, GRAV_ALIGNED_BODY_FRAME_NAME)
+
+        odom_T_hand = odom_T_flat_body * math_helpers.SE3Pose.from_proto(flat_body_T_hand)
+
+        # duration in seconds
+        seconds = 2
+
+        arm_command = RobotCommandBuilder.arm_pose_command(
+            odom_T_hand.x, odom_T_hand.y, odom_T_hand.z, odom_T_hand.rot.w, odom_T_hand.rot.x,
+            odom_T_hand.rot.y, odom_T_hand.rot.z, ODOM_FRAME_NAME, seconds)
+
+        cmd_id = command_client.robot_command(arm_command)
+
+    except Exception as e:
+        print('Failed to raise the arm successfully. Reason: ' + str(e))
