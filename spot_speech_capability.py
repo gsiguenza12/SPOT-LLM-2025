@@ -18,28 +18,41 @@ import pygame
 import uuid
 from openai import OpenAI
 from dotenv import load_dotenv
+import pvporcupine
+from gpt_module import generate_function
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Set Google Cloud credentials
 google_creds = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-if google_creds:
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = google_creds
-else:
+if not google_creds:
     raise ValueError("GOOGLE_APPLICATION_CREDENTIALS not found in environment variables")
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = google_creds
 
+# Set OpenAI API key
 openai_key = os.getenv('OPENAI_API_KEY')
-if openai_key:
-    openai.api_key = openai_key
-else:
+if not openai_key:
     raise ValueError("OPENAI_API_KEY not found in environment variables")
+openai.api_key = openai_key
+
+# Set Porcupine access key
+porcupine_key = os.getenv('PORCUPINE_ACCESS_KEY')
+if not porcupine_key:
+    raise ValueError("PORCUPINE_ACCESS_KEY not found in environment variables")
 
 instructions = "You are an assistant that can perform tasks and answer questions. Since the response will be translated to speech, try to keep it short"
 
 # Initialize Google Cloud Speech client
 stt_client = speech.SpeechClient()
 tts_client = texttospeech.TextToSpeechClient()
+
+# Initialize Porcupine wake word detector
+porcupine = pvporcupine.create(
+    access_key=porcupine_key,
+    keyword_paths=['spot.ppn']  # Using custom PPN file
+)
+
 audio_responses = [
     "intro/readyforyourcommand.mp3",
     "intro/whatsupBoss.mp3",
@@ -48,28 +61,52 @@ audio_responses = [
     "intro/yeshowmayihelpyou.mp3"
 ]
 
-#Enable spot to act as GPT assistant
-#If spot doesnt find function in the list, it will respond like a normal GPT assistant
-#If spot finds function in the list, it will execute the function
-
-#main function
-def main():
-    print("Listening...")
+def detect_wake_word():
+    """
+    Listen for the wake word using custom PPN file
+    Returns True if wake word is detected, False otherwise
+    """
+    pa = pyaudio.PyAudio()
+    audio_stream = pa.open(
+        rate=porcupine.sample_rate,
+        channels=1,
+        format=pyaudio.paInt16,
+        input=True,
+        frames_per_buffer=porcupine.frame_length
+    )
+    
     try:
         while True:
-                #play_audio(random.choice(audio_responses))
+            pcm = audio_stream.read(porcupine.frame_length)
+            pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
+            keyword_index = porcupine.process(pcm)
+            
+            if keyword_index >= 0:
+                return True
+    finally:
+        audio_stream.close()
+        pa.terminate()
+
+def main():
+    print("Listening for wake word...")
+    try:
+        while True:
+            if detect_wake_word():
+                #Wake word is "Hey Spot"
+                print("Wake word detected!")
                 
                 audio_file = record_audio()
                 transcribed_text = transcribe_audio(audio_file)
                 print(f"Transcribed Text: {transcribed_text}")
+                return transcribed_text
+                #gpt_response = process_with_gpt(transcribed_text)
+                #print(f"GPT-4 Response: {gpt_response}")
+                #text_to_speech(gpt_response)
                 
-                gpt_response = process_with_gpt(transcribed_text)
-                print(f"GPT-4 Response: {gpt_response}")
-                text_to_speech(gpt_response)
     finally:
-        pygame.mixer.quit()
-        print("Program terminated")
-
+        #porcupine.delete()
+        #pygame.mixer.quit()
+        print("")
 
 def process_with_gpt(text):
     """
@@ -104,26 +141,6 @@ user_pins = {}
    # return pvporcupine.create(access_key=access_key, keyword_paths=[keyword_file_path])
 
 # Speech to text
-def detect_wake_word(detector):
-    pa = pyaudio.PyAudio()
-    audio_stream = pa.open(
-        rate=detector.sample_rate,
-        channels=1,
-        format=pyaudio.paInt16,
-        input=True,
-        frames_per_buffer=detector.frame_length)
-    try:
-        while True:
-            # Reads and Processes Audio
-            pcm = audio_stream.read(detector.frame_length)
-            pcm = struct.unpack_from("h" * detector.frame_length, pcm)
-            keyword_index = detector.process(pcm)
-            if detector.keywords[keyword_index] == "spot":
-                return True
-    finally:
-        audio_stream.close()
-        pa.terminate()
-
 def is_silent(chunk, threshold):
     """
     Check if the audio contains words
