@@ -1,17 +1,34 @@
-# SPOT-LLM
+<!--
+Copyright (c) 2023 Boston Dynamics, Inc.  All rights reserved.
 
-Use OpenAI to continuously interact with and command SPOT
+Downloading, reproducing, distributing or otherwise using the SDK Software
+is subject to the terms and conditions of the Boston Dynamics Software
+Development Kit License (20191101-BDSDK-SL).
+-->
 
-[JIRA Board](https://spot-llm.atlassian.net/jira/software/projects/SLLM/boards/2)
+<p class="github-only">
+<b>The Spot SDK documentation is best viewed via our developer site at <a href="https://dev.bostondynamics.com">dev.bostondynamics.com</a>. </b>
+</p>
 
-## Relevant References
+# Spot SDK
 
-- [Boston Dynamics Hawkeye](https://github.com/gsiguenza12/LLM-spot-boston-dynamics/blob/master/main.py)
-- [Previous group's report](https://docs.google.com/document/d/1hg1XWWe2ahRLNhT55p-1xw8ulFnpqdmBXqZ_e8rBZbg/edit?usp=sharing)
+Develop applications and payloads for Spot using the Boston Dynamics Spot SDK.
 
-## Adding Instructions
+The SDK consists of:
 
-    Step 1: add to command list in main.py
-    Step 2: add the call to the function in task function in main.py
-    Step 3: add to gpt_module.py as tool
-    Step 4: add to SPOT_functions.py as function(details of function here)
+- [Conceptual documentation](docs/concepts/README.md). These documents explain the key abstractions used by the Spot API.
+- [Python client library](docs/python/README.md). Applications using the Python library can control Spot and read sensor and health information from Spot. A wide variety of example programs and a QuickStart guide are also included.
+- [Payload developer documentation](docs/payload/README.md). Payloads add additional sensing, communication, and control capabilities beyond what the base platform provides. The Payload ICD covers the mechanical, electrical, and software interfaces that Spot supports.
+- [Spot API protocol definition](protos/bosdyn/api/README.md). This reference guide covers the details of the protocol applications used to communicate to Spot. Application developers who wish to use a language other than Python can implement clients that speak the protocol.
+- [Spot SDK Repository](https://github.com/boston-dynamics/spot-sdk). The GitHub repo where all of the Spot SDK code is hosted.
+
+This is version 4.1.1 of the SDK. Please review the [Release Notes](docs/release_notes.md) to see what has changed.
+
+## Contents
+
+- [Concepts](docs/concepts/README.md)
+- [Python](docs/python/README.md)
+- [Payloads](docs/payload/README.md)
+- [API Protocol](docs/protos/README.md)
+- [Release Notes](docs/release_notes.md)
+- [SDK Repository](https://github.com/boston-dynamics/spot-sdk)
