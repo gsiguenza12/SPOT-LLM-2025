@@ -1,6 +1,5 @@
 import os
 from google.cloud import speech
-import pvporcupine
 import pyaudio
 import wave
 import struct 
@@ -13,21 +12,47 @@ import time
 from pydub import AudioSegment
 from pydub.playback import play
 import random
-import openai
-from google.cloud import texttospeech
+import openai 
+from google.cloud import texttospeech, speech
 import pygame  
 import uuid
+from openai import OpenAI
+from dotenv import load_dotenv
+import pvporcupine
+from gpt_module import generate_function
 
+# Load environment variables from .env file
+load_dotenv()
 
 # Set Google Cloud credentials
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "redacted"
-openai.api_key = 'sk-redacted'
+google_creds = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+if not google_creds:
+    raise ValueError("GOOGLE_APPLICATION_CREDENTIALS not found in environment variables")
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = google_creds
+
+# Set OpenAI API key
+openai_key = os.getenv('OPENAI_API_KEY')
+if not openai_key:
+    raise ValueError("OPENAI_API_KEY not found in environment variables")
+openai.api_key = openai_key
+
+# Set Porcupine access key
+porcupine_key = os.getenv('PORCUPINE_ACCESS_KEY')
+if not porcupine_key:
+    raise ValueError("PORCUPINE_ACCESS_KEY not found in environment variables")
 
 instructions = "You are an assistant that can perform tasks and answer questions. Since the response will be translated to speech, try to keep it short"
 
 # Initialize Google Cloud Speech client
 stt_client = speech.SpeechClient()
 tts_client = texttospeech.TextToSpeechClient()
+
+# Initialize Porcupine wake word detector
+porcupine = pvporcupine.create(
+    access_key=porcupine_key,
+    keyword_paths=['spot.ppn']  # Using custom PPN file
+)
+
 audio_responses = [
     "intro/readyforyourcommand.mp3",
     "intro/whatsupBoss.mp3",
@@ -35,77 +60,92 @@ audio_responses = [
     "intro/whatwouldyouhavemedo.mp3",
     "intro/yeshowmayihelpyou.mp3"
 ]
-def main():
-    detector = create_detector()
-    print("Listening...")
+
+def detect_wake_word():
+    """
+    Listen for the wake word using custom PPN file
+    Returns True if wake word is detected, False otherwise
+    """
+    pa = pyaudio.PyAudio()
+    audio_stream = pa.open(
+        rate=porcupine.sample_rate,
+        channels=1,
+        format=pyaudio.paInt16,
+        input=True,
+        frames_per_buffer=porcupine.frame_length
+    )
+    
     try:
         while True:
-            if detect_wake_word(detector):
-                play_audio(random.choice(audio_responses))
+            pcm = audio_stream.read(porcupine.frame_length)
+            pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
+            keyword_index = porcupine.process(pcm)
+            
+            if keyword_index >= 0:
+                return True
+    finally:
+        audio_stream.close()
+        pa.terminate()
+
+def main():
+    print("Listening for wake word...")
+    try:
+        while True:
+            if detect_wake_word():
+                #Wake word is "Hey Spot"
+                print("Wake word detected!")
+                
                 audio_file = record_audio()
                 transcribed_text = transcribe_audio(audio_file)
                 print(f"Transcribed Text: {transcribed_text}")
+                return transcribed_text
+                #gpt_response = process_with_gpt(transcribed_text)
+                #print(f"GPT-4 Response: {gpt_response}")
+                #text_to_speech(gpt_response)
                 
-                # Process transcribed text with GPT-4
-                gpt_response = process_with_gpt(transcribed_text)
-                print(f"GPT-3.5 Response: {gpt_response}")
-                text_to_speech(gpt_response)
-
-          
     finally:
-        detector.delete()
+        #porcupine.delete()
+        #pygame.mixer.quit()
+        print("")
+
 def process_with_gpt(text):
     """
     Function to send text to GPT-3.5 Turbo and return the response.
     """
+    client = OpenAI(api_key=openai.api_key)
     try:
         # Combine instructions and user input to form the messages
-        messages = [
-            {"role": "system", "content": instructions},
-            {"role": "user", "content": text}
-        ]
-        
-        # Call the API with the constructed messages
-        response = openai.ChatCompletion.create(
-          model="gpt-3.5-turbo",
-          messages=messages,
-          temperature=0,
-          max_tokens=50  # Adjust the number of tokens (words) in the response
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": instructions},
+                {"role": "user", "content": text}
+            ]
         )
-        return response['choices'][0]['message']['content'].strip()
+        return completion.choices[0].message.content
+    
     except Exception as e:
-        print(f"Error with GPT-3.5 Turbo processing: {e}")
+        print(f"Error with GPT-4  processing: {e}")
         return ""
+    
+
 def play_audio(file_path):
     """Function to play an audio file."""
     sound = AudioSegment.from_file(file_path, format="mp3")
     play(sound)
 user_pins = {}
 
-def create_detector():
-    access_key = 'redacted'
-    keyword_file_path = "terminal.ppn"  # replace with the path to your .ppn file
-    return pvporcupine.create(access_key=access_key, keyword_paths=[keyword_file_path])
+#def create_detector():
+ #   access_key = 'redacted'
+  #  keyword_file_path = "terminal.ppn"  # replace with the path to your .ppn file
+   # return pvporcupine.create(access_key=access_key, keyword_paths=[keyword_file_path])
 
-
-def detect_wake_word(detector):
-    pa = pyaudio.PyAudio()
-    audio_stream = pa.open(
-        rate=detector.sample_rate,
-        channels=1,
-        format=pyaudio.paInt16,
-        input=True,
-        frames_per_buffer=detector.frame_length)
-    try:
-        while True:
-            pcm = audio_stream.read(detector.frame_length)
-            pcm = struct.unpack_from("h" * detector.frame_length, pcm)
-            keyword_index = detector.process(pcm)
-            if keyword_index >= 0:
-                return True
-    finally:
-        audio_stream.close()
-        pa.terminate()
+# Speech to text
+def is_silent(chunk, threshold):
+    """
+    Check if the audio contains words
+    """
+    return  max(chunk) < threshold
 
 def record_audio():
     p = pyaudio.PyAudio()
@@ -116,9 +156,26 @@ def record_audio():
                     frames_per_buffer=1024)
     print("Recording...")
     frames = []
-    for i in range(0, int(16000 / 1024 * 3)):  # Adjust recording duration as needed
-        data = stream.read(1024)
+    silence_threshold = 500  # Adjust this threshold as needed
+    silence_duration = 0
+    max_silence_duration = 2 * 16000 / 1024  # 2 seconds of silence
+
+
+    
+    while True:
+        #add a wake word detector
+        
+        data = stream.read(2048)
         frames.append(data)
+        audio_data = struct.unpack(str(len(data)) + 'B', data)
+        
+        if is_silent(audio_data, silence_threshold):
+            silence_duration += 1
+        else:
+            silence_duration = 0
+        
+        if silence_duration > max_silence_duration:
+            break
     print("Finished recording")
 
     # Save the recording as a WAV file
@@ -135,6 +192,8 @@ def record_audio():
     p.terminate()
 
     return file_path
+
+
 
 def transcribe_audio(file_path):
     with open(file_path, 'rb') as audio_file:
@@ -155,6 +214,9 @@ def transcribe_audio(file_path):
         # Handle the case where no transcription is returned
         print("No transcription available for the provided audio.")
         return ""
+    
+
+
 def text_to_speech(text):
     """
     Convert text to speech and play the audio.
@@ -184,11 +246,10 @@ def text_to_speech(text):
         out.write(response.audio_content)
         print(f'Audio content written to file "{output_filename}"')
     
-    # Play the audio using pygame
-    pygame.mixer.init()
-    pygame.mixer.music.load(output_filename)
-    pygame.mixer.music.play()
-    while pygame.mixer.music.get_busy() == True:
-        continue
+ # Play the audio using pydub
+    sound = AudioSegment.from_file(output_filename, format="mp3")
+    play(sound)
+
 if __name__ == "__main__":
     main()
+

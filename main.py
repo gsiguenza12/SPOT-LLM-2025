@@ -1,45 +1,66 @@
 from gpt_module import generate_function
 from threading import Thread, Event
 from bosdyn.client import create_standard_sdk
+from dotenv import load_dotenv
+import os
 
 # Add import for new functions here
-from SPOT_functions import authenticate_SPOT, stop_spot, power_off_spot, power_on_spot, move_spot_forward
+from SPOT_functions import authenticate_SPOT, stop_spot, power_off_spot, power_on_spot, move_spot
 import json
+from spot_speech_capability import main as speech_main
+from spot_speech_capability import text_to_speech
 
 # import for text to speech, speech to text
 from gtts import gTTS
-import os
 import pyttsx3
 
+# Load environment variables
+load_dotenv()
+
+# How to implement a function:
+#    Step 1: add to command list in main.py
+#    Step 2: add the call to the function in task function in main.py
+#    Step 3: add to gpt_module.py as tool
+#    Step 4: add to SPOT_functions.py as function(details of function here)
 
 COMMAND_LIST = {
     "power_on", 
     "power_off", 
-    "move_spot_forward",
-    # ADD move_spot_backward
+    "move_spot",
     "stop",
     "quit"
     }
 
-SDK = create_standard_sdk('SpotClient')   #create spot sdk
-ROBOT = SDK.create_robot('192.168.80.3')
+# Get SPOT credentials from environment variables
+SPOT_USERNAME = os.getenv('SPOT_USERNAME')
+SPOT_PASSWORD = os.getenv('SPOT_PASSWORD')
+SPOT_IP = os.getenv('SPOT_IP')
 
+if not all([SPOT_USERNAME, SPOT_PASSWORD, SPOT_IP]):
+    raise ValueError("SPOT credentials not found in environment variables")
+
+# Set up the robot with credentials
+SDK = create_standard_sdk('SpotClient')
+robot = SDK.create_robot(SPOT_IP)
+robot.username = SPOT_USERNAME
+robot.password = SPOT_PASSWORD
+ROBOT = robot
 
 # to test
-mytext = "Hello welcome to the spot llm program!"
+# mytext = "Hello welcome to the spot llm program!"
 
 # which language you want to convert
-language = 'en'
+# language = 'en'
 
 # Passing the text and language to the engine,
 # here we have marked slow=False. Which tells
 # the module that the converted audio should
 # have a high speed
-myobj = gTTS(text=mytext, lang=language, slow=False)
+# myobj = gTTS(text=mytext, lang=language, slow=False)
 
 # Saving the converted audio in a mp3 file named
 # welcome
-myobj.save("welcome.mp3")
+# myobj.save("welcome.mp3")
 
 # Playing the converted file
 # os.system("start welcome.mp3")
@@ -77,14 +98,13 @@ def check_stop_or_quit(input_string, threads, event):
 
 def task(event, function_name, function_arguments):
     print("Attempting to run the function " + function_name)
-    if(function_name == "move_spot_forward"):
+    if(function_name == "move_spot"):
         args = json.loads(function_arguments)
-        distance_m = args["time"]
-        distance_unit = args["time_format"]
-        move_spot_forward(robot=ROBOT, distance_m=distance_m, distance_unit=distance_unit, event=event)
-    # ADD CASE FOR MOVING SPOT BACKWARD
-    # elif(function_name == "move_spot_backward"):
-
+        v_x = args["v_x"]
+        v_y = args["v_y"]
+        v_rot = args["v_rot"]
+        duration = args["duration"]
+        move_spot(robot=ROBOT, v_x=v_x, v_y=v_y, v_rot=v_rot, duration=duration, event=event)
     elif(function_name == "power_on"):
         power_on_spot(ROBOT)
     elif(function_name == "power_off"):
@@ -119,7 +139,7 @@ def main():
             engine.say("What do you want to do? ")
             engine.runAndWait()
 
-            ask_gpt = input("What do you want to do? ").lower()
+            ask_gpt = speech_main()
             if check_stop_or_quit(ask_gpt, threads, event):
                 break
             else:
@@ -137,6 +157,7 @@ def main():
                     threads = [thread]
                     print("starting task %s" % gpt_function)
                     thread.start()
+                
     except Exception as e:
         print("Unexcpected Error has occured. Reason: " + str(e))
 
