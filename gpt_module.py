@@ -1,6 +1,9 @@
 from openai import OpenAI
 import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 """
 The provided code defines a list of tools, each represented as a dictionary. 
 These tools are functions designed to control a SPOT robot, a type of robotic system. 
@@ -13,7 +16,7 @@ ensuring that each function is clearly described and that any required parameter
 
 client = OpenAI(
     # This is the default and can be omitted
-    api_key="redacted",
+    api_key=os.getenv('OPENAI_API_KEY'),
 )
 # set the output location
 current_directory = os.getcwd()
@@ -23,92 +26,36 @@ tools = [
     {
         "type": "function",
         "function": {
-            "name": "move_spot_forward",
-            "description": "Command a SPOT robot to move forward",
+            "name": "move_spot",
+            "description": "Command a SPOT robot to move with specified velocities. Use these predefined patterns:\n" +
+                         "- Forward: v_x = 0.5, v_y = 0, v_rot = 0\n" +
+                         "- Backward: v_x = -0.5, v_y = 0, v_rot = 0\n" +
+                         "- Left: v_x = 0, v_y = 0.5, v_rot = 0\n" +
+                         "- Right: v_x = 0, v_y = -0.5, v_rot = 0\n" +
+                         "- Rotate clockwise: v_x = 0, v_y = 0, v_rot = 0.5\n" +
+                         "- Rotate counterclockwise: v_x = 0, v_y = 0, v_rot = -0.5\n" +
+                         "For all movements, use a default duration of 2 seconds unless specified otherwise.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "time": {
-                        "type": "integer",
-                        "description": "The time it takes for the robot to move forward.",
+                    "v_x": {
+                        "type": "number",
+                        "description": "Forward/backward velocity (m/s). Positive for forward, negative for backward. Use predefined values: 0.5 for forward, -0.5 for backward, 0 for sideways/rotation",
                     },
-                    "time_format": {
-                        "type": "string",
-                        "enum": ["seconds", "minutes"],
-                        "description": "The unit of time for this command. Make sure that it is either seconds or minutes. "
-                        "Do not accept any other time format as a valid format. Ensure the time does not exceed 30 seconds",
+                    "v_y": {
+                        "type": "number",
+                        "description": "Left/right velocity (m/s). Positive for right, negative for left. Use predefined values: 0.5 for left, -0.5 for right, 0 for forward/backward/rotation",
                     },
+                    "v_rot": {
+                        "type": "number",
+                        "description": "Rotational velocity (rad/s). Positive for clockwise, negative for counterclockwise. Use predefined values: 0.5 for clockwise, -0.5 for counterclockwise, 0 for linear movement",
+                    },
+                    "duration": {
+                        "type": "number",
+                        "description": "Duration of movement in seconds. Default to 2 seconds unless specified otherwise",
+                    }
                 },
-                "required": ["time", "time_format"],
-            },
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "move_spot_backward",
-            "description": "Command a SPOT robot to move backward",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "time": {
-                        "type": "integer",
-                        "description": "The time it takes for the robot to move backward.",
-                    },
-                    "time_format": {
-                        "type": "string",
-                        "enum": ["seconds", "minutes"],
-                        "description": "The unit of time for this command. Make sure that it is either seconds or minutes. "
-                        "Do not accept any other time format as a valid format. Ensure the time does not exceed 30 seconds",
-                    },
-                },
-                "required": ["time", "time_format"],
-            },
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "move_spot_left",
-            "description": "Command a SPOT robot to move left",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "time": {
-                        "type": "integer",
-                        "description": "The time it takes for the robot to move left.",
-                    },
-                    "time_format": {
-                        "type": "string",
-                        "enum": ["seconds", "minutes"],
-                        "description": "The unit of time for this command. Make sure that it is either seconds or minutes. "
-                        "Do not accept any other time format as a valid format. Ensure the time does not exceed 30 seconds",
-                    },
-                },
-                "required": ["time", "time_format"],
-            },
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "move_spot_right",
-            "description": "Command a SPOT robot to move right",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "time": {
-                        "type": "integer",
-                        "description": "The time it takes for the robot to move right.",
-                    },
-                    "time_format": {
-                        "type": "string",
-                        "enum": ["seconds", "minutes"],
-                        "description": "The unit of time for this command. Make sure that it is either seconds or minutes. "
-                        "Do not accept any other time format as a valid format. Ensure the time does not exceed 30 seconds",
-                    },
-                },
-                "required": ["time", "time_format"],
+                "required": ["v_x", "v_y", "v_rot", "duration"],
             },
         }
     },
