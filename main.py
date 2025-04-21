@@ -49,7 +49,7 @@ myobj.save("welcome.mp3")
 def clean_tasks(threads, event):
     if(len(threads) == 0):
         return
-    if(threads[0].is_alive):
+    if(threads[0].is_alive()):
         event.set()
         threads[0].join()
         event.clear()
