@@ -1,6 +1,7 @@
-from gpt_module import generate_function
+from gpt_module import generate_function, command_mapping
 from threading import Thread, Event
 from bosdyn.client import create_standard_sdk
+from bosdyn.client.lease import LeaseKeepAlive
 from dotenv import load_dotenv
 import os
 
@@ -13,6 +14,8 @@ from spot_speech_capability import text_to_speech
 # import for text to speech, speech to text
 from gtts import gTTS
 import pyttsx3
+import sys
+import subprocess
 
 # Load environment variables
 load_dotenv()
@@ -28,7 +31,8 @@ COMMAND_LIST = {
     "power_off", 
     "move_spot",
     "stop",
-    "quit"
+    "quit",
+    "execute_example"
     }
 
 # Get SPOT credentials from environment variables
@@ -96,6 +100,22 @@ def check_stop_or_quit(input_string, threads, event):
             return True
     return False
 
+def install_requirements(example_path):
+    """
+    Install requirements for an example if requirements.txt exists
+    """
+    requirements_path = os.path.join(example_path, 'requirements.txt')
+    if os.path.exists(requirements_path):
+        print(f"Installing requirements from {requirements_path}")
+        try:
+            import subprocess
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
+            print("Requirements installed successfully")
+        except subprocess.CalledProcessError as e:
+            print(f"Error installing requirements: {e}")
+            return False
+    return True
+
 def task(event, function_name, function_arguments):
     print("Attempting to run the function " + function_name)
     if(function_name == "move_spot"):
@@ -105,10 +125,74 @@ def task(event, function_name, function_arguments):
         v_rot = args["v_rot"]
         duration = args["duration"]
         move_spot(robot=ROBOT, v_x=v_x, v_y=v_y, v_rot=v_rot, duration=duration, event=event)
+    elif(function_name == "execute_example"):
+        args = json.loads(function_arguments)
+        example_name = args["example_name"]
+        parameters = args.get("parameters", {})
+        
+        # Get the example path from the command mapping
+        if example_name in command_mapping:
+            example_path = command_mapping[example_name]
+            print(f"Executing example: {example_name} from {example_path}")
+            
+            # Install requirements first
+            if not install_requirements(os.path.dirname(example_path)):
+                print("Failed to install requirements, aborting example execution")
+                return
+            
+            try:
+                # Add the example directory to Python path
+                example_dir = os.path.dirname(example_path)
+                if example_dir not in sys.path:
+                    sys.path.append(example_dir)
+                
+                # Import and run the example module
+                module_name = os.path.splitext(os.path.basename(example_path))[0]
+                example_module = __import__(module_name)
+                
+                # Ensure we have a lease before running the example
+                lease_client = ROBOT.ensure_client('lease')
+                try:
+                    # First try to acquire the lease normally
+                    lease = lease_client.acquire()
+                except Exception as e:
+                    if "ResourceAlreadyClaimedError" in str(e):
+                        print("Lease already claimed, attempting to take lease...")
+                        try:
+                            lease = lease_client.take()
+                        except Exception as take_error:
+                            print(f"Failed to take lease: {take_error}")
+                            print("Please ensure no other program is controlling the robot")
+                            return
+                    else:
+                        print(f"Failed to acquire lease: {e}")
+                        print("Please ensure no other program is controlling the robot")
+                        return
+                
+                lease_keepalive = LeaseKeepAlive(lease_client)
+                
+                try:
+                    # Call the main function with our robot instance
+                    if hasattr(example_module, 'main'):
+                        example_module.main(robot=ROBOT)
+                    else:
+                        print(f"Example {example_name} does not have a main function")
+                finally:
+                    # Clean up the lease
+                    lease_keepalive.shutdown()
+                    lease_client.return_lease(lease)
+                
+            except Exception as e:
+                print(f"Error executing example {example_name}: {str(e)}")
+        else:
+            print(f"Example {example_name} not found")
     elif(function_name == "power_on"):
         power_on_spot(ROBOT)
     elif(function_name == "power_off"):
         power_off_spot(ROBOT)
+    elif(function_name == "stop"):
+        stop_spot(ROBOT)
+
 
 '''
 -> Perception -> Control -> Action -> Environment -> LOOP until goal or condition is met (in our case when we tell spot to stop listening)
@@ -116,7 +200,7 @@ def task(event, function_name, function_arguments):
 def main():
     # username = "admin"
     # password = "sh384s6nnk6q"
-
+    print(command_mapping)
     # Initializing speech recognition engine
     engine = pyttsx3.init()
     engine.say("Hello, how are you? Welcome to the Spot-LLM Program!")
@@ -133,8 +217,10 @@ def main():
     try:
         # Main program loop
         while True:
+            # acquire lease if not acquired
+            
+      
             gpt_function = ""
-
             # TEST
             engine.say("What do you want to do? ")
             engine.runAndWait()

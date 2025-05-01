@@ -1,6 +1,7 @@
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
+import json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -13,7 +14,59 @@ This provides a structured way to define and document the functions available fo
 ensuring that each function is clearly described and that any required parameters are well-defined.
 """
 
+def parse_examples_directory():
+    """
+    Parse the examples directory to create a mapping of commands to example files.
+    Returns a dictionary mapping command names to their corresponding example file paths.
+    """
+    # Use absolute path to examples directory
+    examples_dir = "/Users/henryngotran/my_spot_env/SPOT-LLM-2025/examples"
+    
+    print(f"Examples dir: {examples_dir}")
+    print(f"Directory exists: {os.path.exists(examples_dir)}")
+    
+    command_mapping = {}
+    
+    # Common command patterns and their corresponding directories
+    command_patterns = {
+        'arm': ['arm_', 'arm-'],
+        'move': ['move_', 'mobility_'],
+        'camera': ['camera_', 'get_image', 'get_depth'],
+        'navigation': ['nav_', 'graph_nav_'],
+        'light': ['light_', 'spot_light'],
+        'docking': ['docking_', 'dock_'],
+        'mission': ['mission_', 'autowalk_'],
+        'data': ['data_', 'logging_'],
+        'sensor': ['sensor_', 'get_robot_state'],
+        'control': ['control_', 'command_']
+    }
+    
+    for root, dirs, files in os.walk(examples_dir):
+        for dir_name in dirs:
+            # Skip hidden directories and special directories
+            if dir_name.startswith('.') or dir_name in ['docs', 'tester_programs']:
+                continue
+                
+            # Look for Python files in the directory
+            dir_path = os.path.join(root, dir_name)
+            for file in os.listdir(dir_path):
+                if file.endswith('.py') and not file.startswith('__'):
+                    # Create a command name from the directory name
+                    command_name = dir_name.replace('_', ' ').replace('-', ' ')
+                    
+                    # Add the Python file to the mapping
+                    command_mapping[command_name] = os.path.join(dir_path, file)
+                    
+                    # Add variations based on command patterns
+                    for pattern, prefixes in command_patterns.items():
+                        if any(dir_name.startswith(prefix) for prefix in prefixes):
+                            command_mapping[pattern] = os.path.join(dir_path, file)
+    
+    return command_mapping
 
+# Initialize command_mapping when the module is imported
+command_mapping = parse_examples_directory()
+print(f"Command mapping: {command_mapping}")
 client = OpenAI(
     # This is the default and can be omitted
     api_key=os.getenv('OPENAI_API_KEY'),
@@ -62,6 +115,30 @@ tools = [
     {
         "type": "function",
         "function": {
+            "name": "execute_example",
+            "description": "Execute a SPOT example program from the examples directory. The system will automatically install any required dependencies from requirements.txt before execution.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "example_name": {
+                        "type": "string",
+                        "description": "Name of the example to execute. Available examples: " + 
+                                     ", ".join(command_mapping.keys()) + 
+                                     "\nNote: Each example may have its own requirements.txt file which will be automatically installed before execution.",
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "description": "Additional parameters for the example program. Check the example's documentation for available parameters.",
+                        "properties": {}
+                    }
+                },
+                "required": ["example_name"],
+            },
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "power_on",
             "description": "Command a SPOT robot to power on",
         }
@@ -91,14 +168,14 @@ tools = [
 
 def generate_function(user_input):
     """
-    Generates a response using the GPT-3.5-turbo model based on the provided user input.
+    Generates a response using the GPT-4 model based on the provided user input.
     Args:
         user_input (str): The input prompt from the user.
     Returns:
         completion: The completion object containing the generated response.
     The function performs the following steps:
     1. Initializes a list of messages with a system message and the user input.
-    2. Calls the GPT-3.5-turbo model to generate a response.
+    2. Calls the GPT-4 model to generate a response.
     3. Continuously updates the conversation with the assistant's messages and user inputs until the response is complete.
     4. Writes the final response to an output file in JSON format.
     5. Ensures the directory for the output file exists, creating it if necessary.
@@ -140,4 +217,5 @@ def generate_function(user_input):
 
     with open(file_path, "w") as outfile:  # Write the response to output.json
         outfile.write(completion.model_dump_json())
+    return completion
     return completion
